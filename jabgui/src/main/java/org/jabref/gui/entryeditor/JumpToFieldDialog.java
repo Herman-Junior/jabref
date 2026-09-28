@@ -51,21 +51,17 @@ public class JumpToFieldDialog extends BaseDialog<Void> {
         viewModel = new JumpToFieldViewModel(this.entryEditor);
         searchField.textProperty().bindBidirectional(viewModel.searchTextProperty());
 
-        // Prefix matching instead of ControlsFX' default substring matching: the popup always preselects
-        // its first suggestion, so "file" would offer (and jump to) "dayfiled" first.
-        AutoCompletionBinding<String> autoCompletion = TextFields.bindAutoCompletion(searchField, request -> {
-            String userText = request.getUserText().toLowerCase(Locale.ROOT);
-            return viewModel.getFieldNames().stream()
-                            .filter(fieldName -> fieldName.toLowerCase(Locale.ROOT).startsWith(userText))
-                            .toList();
-        });
+        AutoCompletionBinding<String> autoCompletion = TextFields.bindAutoCompletion(
+                searchField, request -> viewModel.getSuggestions(request.getUserText()));
         // The open suggestion popup swallows Enter, so the dialog never sees it: jump on the
         // completion event instead. This also makes clicking a suggestion jump right away.
         autoCompletion.setOnAutoCompleted(_ -> confirm());
 
-        newFieldHint.managedProperty().bind(newFieldHint.visibleProperty());
+        // The hint keeps its space in the layout at all times. Were it unmanaged while hidden,
+        // showing it would grow the content of an already sized dialog and push the button bar
+        // out of the window.
         newFieldHint.visibleProperty().bind(Bindings.createBooleanBinding(
-                () -> viewModel.isNewField(searchField.getText()), searchField.textProperty()));
+                () -> viewModel.willCreateNewField(searchField.getText()), searchField.textProperty()));
 
         searchField.setOnAction(event -> {
             confirm();
@@ -84,7 +80,7 @@ public class JumpToFieldDialog extends BaseDialog<Void> {
         String selectedField = searchField.getText();
 
         if (StringUtil.isNotBlank(selectedField)) {
-            String fieldToJumpTo = selectedField.toLowerCase().strip();
+            String fieldToJumpTo = selectedField.toLowerCase(Locale.ROOT).strip();
             entryEditor.selectField(fieldToJumpTo);
         }
     }

@@ -23,11 +23,16 @@ import com.airhacks.afterburner.views.ViewLoader;
 import de.saxsys.mvvmfx.utils.validation.visualization.ControlsFxVisualizer;
 import jakarta.inject.Inject;
 
+import javafx.event.ActionEvent;
+import javafx.scene.control.Button;
+
+
 public class GitCommitDialogView extends BaseDialog<Void> {
 
     @FXML private TextArea commitMessage;
     @FXML private ButtonType commitButton;
     @FXML private ButtonType commitAndPushButton;
+    @FXML private ButtonType showDiffButton;
 
     private GitCommitDialogViewModel viewModel;
 
@@ -61,7 +66,7 @@ public class GitCommitDialogView extends BaseDialog<Void> {
         commitMessage.setPromptText(Localization.lang("Enter commit message here"));
 
         this.setResultConverter(button -> {
-            if (button != ButtonType.CANCEL) {
+            if (button != ButtonType.CANCEL && button != showDiffButton) {
                 if (button == commitAndPushButton) {
                     viewModel.commitAndPush(this::close);
                 } else {
@@ -74,13 +79,20 @@ public class GitCommitDialogView extends BaseDialog<Void> {
         Platform.runLater(() -> {
             visualizer.setDecoration(new IconValidationDecorator());
             visualizer.initVisualization(viewModel.commitMessageValidation(), commitMessage, true);
+
+            Button showDiff = (Button) getDialogPane().lookupButton(showDiffButton);
+            showDiff.addEventFilter(ActionEvent.ACTION, event -> {
+                showDiff();
+                event.consume();
+            });
+
             // [impl->req~ux.textdialogs.focus~1]
             commitMessage.requestFocus();
         });
     }
 
     // [impl->req~git.commit.preview-current-library~1]
-    @FXML
+
     private void showDiff() {
         viewModel.diffTask()
                  .onSuccess(this::openDiffDialog)
