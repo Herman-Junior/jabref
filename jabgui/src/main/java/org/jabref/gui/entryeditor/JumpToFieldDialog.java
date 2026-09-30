@@ -51,15 +51,17 @@ public class JumpToFieldDialog extends BaseDialog<Void> {
         viewModel = new JumpToFieldViewModel(this.entryEditor);
         searchField.textProperty().bindBidirectional(viewModel.searchTextProperty());
 
+        //
         AutoCompletionBinding<String> autoCompletion = TextFields.bindAutoCompletion(
                 searchField, request -> viewModel.getSuggestions(request.getUserText()));
         // The open suggestion popup swallows Enter, so the dialog never sees it: jump on the
         // completion event instead. This also makes clicking a suggestion jump right away.
         autoCompletion.setOnAutoCompleted(_ -> confirm());
 
-        // The hint keeps its space in the layout at all times. Were it unmanaged while hidden,
-        // showing it would grow the content of an already sized dialog and push the button bar
-        // out of the window.
+        // The hint label stays managed at all times so it always reserves its row. Binding managed
+        // to visible would grow the content of an already sized dialog and push the button bar out
+        // of the window.
+        // will create a new field if the suggestion is clicked
         newFieldHint.visibleProperty().bind(Bindings.createBooleanBinding(
                 () -> viewModel.willCreateNewField(searchField.getText()), searchField.textProperty()));
 

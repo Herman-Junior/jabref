@@ -6,6 +6,9 @@ import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.TextArea;
+import javafx.event.ActionEvent;
+import javafx.scene.control.Button;
+
 
 import org.jabref.gui.DialogService;
 import org.jabref.gui.StateManager;
@@ -23,8 +26,6 @@ import com.airhacks.afterburner.views.ViewLoader;
 import de.saxsys.mvvmfx.utils.validation.visualization.ControlsFxVisualizer;
 import jakarta.inject.Inject;
 
-import javafx.event.ActionEvent;
-import javafx.scene.control.Button;
 
 
 public class GitCommitDialogView extends BaseDialog<Void> {
@@ -64,7 +65,9 @@ public class GitCommitDialogView extends BaseDialog<Void> {
 
         commitMessage.textProperty().bindBidirectional(viewModel.commitMessageProperty());
         commitMessage.setPromptText(Localization.lang("Enter commit message here"));
-
+        // Show diff never reaches this point because its event filter consumes the action, but
+        // the condition below treats anything that is not Cancel as a commit, so it is excluded
+        // explicitly rather than relying on that.
         this.setResultConverter(button -> {
             if (button != ButtonType.CANCEL && button != showDiffButton) {
                 if (button == commitAndPushButton) {
@@ -79,6 +82,10 @@ public class GitCommitDialogView extends BaseDialog<Void> {
         Platform.runLater(() -> {
             visualizer.setDecoration(new IconValidationDecorator());
             visualizer.initVisualization(viewModel.commitMessageValidation(), commitMessage, true);
+            // A ButtonType closes the dialog when pressed. Show diff must leave it open so the
+            // user can still commit, hence the filter consumes the event before the default
+            // close handler sees it. The lookup needs the dialog pane, which only exists once
+            // the view has been set as one.
 
             Button showDiff = (Button) getDialogPane().lookupButton(showDiffButton);
             showDiff.addEventFilter(ActionEvent.ACTION, event -> {
@@ -92,7 +99,6 @@ public class GitCommitDialogView extends BaseDialog<Void> {
     }
 
     // [impl->req~git.commit.preview-current-library~1]
-
     private void showDiff() {
         viewModel.diffTask()
                  .onSuccess(this::openDiffDialog)
